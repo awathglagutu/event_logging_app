@@ -42,17 +42,54 @@ class _SplashPageState extends State<SplashPage> {
   @override
   void initState() { super.initState(); _routeFromSession(); }
   Future<void> _routeFromSession() async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefsFuture = SharedPreferences.getInstance();
+    await Future<void>.delayed(const Duration(seconds: 3));
+    final prefs = await prefsFuture;
     if (!mounted) return;
     final active = (prefs.getString('observer_name') ?? '').isNotEmpty;
     Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => active ? const ParticipantsDashboard() : const LoginPage()));
   }
   @override
-  Widget build(BuildContext context) => Scaffold(body: Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-    Container(width: 88, height: 88, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(28)), child: const Icon(Icons.fact_check_rounded, color: _blue, size: 46)),
-    const SizedBox(height: 18), const Text('Fieldwork', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800, color: _ink)),
-    const SizedBox(height: 18), const CircularProgressIndicator(color: _blue),
-  ])));
+  Widget build(BuildContext context) => Scaffold(
+    body: Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 116,
+            height: 116,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(32),
+              boxShadow: const [BoxShadow(color: Color(0x14356AE6), blurRadius: 24, offset: Offset(0, 10))],
+            ),
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                const Icon(Icons.assignment_rounded, color: _ink, size: 74),
+                Positioned(
+                  right: 19,
+                  bottom: 23,
+                  child: Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(color: _blue, borderRadius: BorderRadius.circular(13), border: Border.all(color: Colors.white, width: 3)),
+                    child: const Icon(Icons.route_rounded, color: Colors.white, size: 23),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+          const Text('Fieldwork', style: TextStyle(fontSize: 30, fontWeight: FontWeight.w800, letterSpacing: -0.5, color: _ink)),
+          const SizedBox(height: 6),
+          const Text('Field observation', style: TextStyle(fontSize: 14, color: _muted)),
+          const SizedBox(height: 28),
+          const SizedBox(width: 30, height: 30, child: CircularProgressIndicator(strokeWidth: 3, color: _blue)),
+        ],
+      ),
+    ),
+  );
 }
 
 class LoginPage extends StatefulWidget {
