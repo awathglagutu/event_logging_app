@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'event_sheet.dart';
 import 'nasa_tlx.dart';
 import 'participant.dart';
+import 'database_service.dart';
 
 const _ink = Color(0xFF17243A);
 const _muted = Color(0xFF7A8798);
@@ -53,6 +54,8 @@ class _ParticipantProfilePageState extends State<ParticipantProfilePage> {
       ),
     );
     if (record != null && mounted) {
+      await DatabaseService.instance.insertEventRecord(widget.participant.id, record);
+      if (!mounted) return;
       setState(() {
         widget.participant.events.insert(0, record);
       });
@@ -66,6 +69,8 @@ class _ParticipantProfilePageState extends State<ParticipantProfilePage> {
       ),
     );
     if (survey != null && mounted) {
+      await DatabaseService.instance.insertSurveyRecord(widget.participant.id, survey);
+      if (!mounted) return;
       setState(() {
         widget.participant.surveys.insert(0, survey);
       });

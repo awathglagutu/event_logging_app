@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'participant.dart';
 import 'participant_profile_page.dart';
+import 'database_service.dart';
 
 const _ink = Color(0xFF17243A);
 const _muted = Color(0xFF7A8798);
@@ -97,7 +98,16 @@ class _ParticipantsDashboardState extends State<ParticipantsDashboard> {
   String _observerMatric = '';
   bool _drawerOpen = false;
   @override
-  void initState() { super.initState(); _loadObserver(); }
+  void initState() { super.initState(); _loadObserver(); _loadParticipants(); }
+  Future<void> _loadParticipants() async {
+    final participants = await DatabaseService.instance.fetchParticipants();
+    if (!mounted) return;
+    setState(() {
+      _participants
+        ..clear()
+        ..addAll(participants);
+    });
+  }
   Future<void> _loadObserver() async {
     final prefs = await SharedPreferences.getInstance();
     if (!mounted) return;
@@ -233,17 +243,14 @@ class _ParticipantsDashboardState extends State<ParticipantsDashboard> {
     );
 
     if (registration != null && mounted) {
-      setState(() {
-        final id = 'P-${_participants.length + 1}';
-        _participants.insert(
-          0,
-          Participant(
-            id: id,
-            name: registration.$1,
-            matricNumber: registration.$2,
-          ),
-        );
-      });
+      final participant = Participant(
+        id: 'P-${DateTime.now().microsecondsSinceEpoch}',
+        name: registration.$1,
+        matricNumber: registration.$2,
+      );
+      await DatabaseService.instance.insertParticipant(participant);
+      if (!mounted) return;
+      setState(() => _participants.insert(0, participant));
     }
   }
 

@@ -15,7 +15,8 @@ const _questions = <String>[
 ];
 
 class SurveyRecord {
-  SurveyRecord(this.name, this.values);
+  SurveyRecord(this.name, this.values, {this.databaseId});
+  int? databaseId;
   final String name;
   final List<int> values;
 }

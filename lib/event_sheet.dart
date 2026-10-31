@@ -15,6 +15,7 @@ const _qualLabels = <String>[
 
 class EventRecord {
   EventRecord({
+    this.databaseId,
     required this.name,
     required this.elapsed,
     required this.wrongTurns,
@@ -26,6 +27,7 @@ class EventRecord {
     required this.checked,
     required this.explanation,
   });
+  int? databaseId;
   final String name;
   final Duration elapsed;
   final int wrongTurns;
