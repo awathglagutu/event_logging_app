@@ -5,6 +5,7 @@ class Participant {
   Participant({
     required this.id,
     required this.name,
+    required this.matricNumber,
     List<EventRecord>? events,
     List<SurveyRecord>? surveys,
   })  : events = events ?? [],
@@ -12,6 +13,7 @@ class Participant {
 
   final String id;
   final String name;
+  final String matricNumber;
   final List<EventRecord> events;
   final List<SurveyRecord> surveys;
 }

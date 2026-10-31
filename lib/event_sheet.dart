@@ -46,7 +46,7 @@ String clockString(Duration duration) {
 
 String _clock(Duration duration) => clockString(duration);
 
-void showEventDetailDialog(BuildContext context, EventRecord record) =>
+void showEventDetailDialog(BuildContext context, EventRecord record, {String matricNumber = ''}) =>
     showDialog<void>(
       context: context,
       builder: (context) => Dialog(
@@ -80,6 +80,10 @@ void showEventDetailDialog(BuildContext context, EventRecord record) =>
                 'Event observation record',
                 style: TextStyle(color: _muted),
               ),
+              if (matricNumber.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Text('Matric number  $matricNumber', style: const TextStyle(color: _muted)),
+              ],
               const SizedBox(height: 14),
               Flexible(
                 child: SingleChildScrollView(
@@ -495,48 +499,50 @@ class _EventEntryPageState extends State<EventEntryPage> {
                         ),
                         const SizedBox(height: 14),
                         _panel(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const _SectionTitle(
-                                'Navigation Errors & Behaviors',
+                          child: Opacity(
+                            opacity: _hasRun ? 1 : 0.45,
+                            child: IgnorePointer(
+                              ignoring: !_hasRun,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const _SectionTitle('Navigation Errors & Behaviors'),
+                                  const SizedBox(height: 10),
+                                  _CounterRow(label: 'Wrong Turns', value: _wrongTurns, onChanged: (v) => setState(() => _wrongTurns = v)),
+                                  _CounterRow(label: 'Hesitation & safe Map Checking', value: _mapChecks, onChanged: (v) => setState(() => _mapChecks = v)),
+                                ],
                               ),
-                              const SizedBox(height: 10),
-                              _CounterRow(
-                                label: 'Wrong Turns',
-                                value: _wrongTurns,
-                                onChanged: (v) =>
-                                    setState(() => _wrongTurns = v),
-                              ),
-                              _CounterRow(
-                                label: 'Hesitation & safe Map Checking',
-                                value: _mapChecks,
-                                onChanged: (v) =>
-                                    setState(() => _mapChecks = v),
-                              ),
-                            ],
+                            ),
                           ),
                         ),
                         const SizedBox(height: 14),
                         _panel(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const _SectionTitle(
-                                'Safety Stops & Environmental Disruptions',
+                          child: Opacity(
+                            opacity: _hasRun ? 1 : 0.45,
+                            child: IgnorePointer(
+                              ignoring: !_hasRun,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const _SectionTitle('Safety Stops & Environmental Disruptions'),
+                                  const SizedBox(height: 14),
+                                  _textArea('Safety Interventions', _interventions),
+                                  _textArea('Disruptions', _disruptions),
+                                  _textArea('Application Issues', _issues),
+                                ],
                               ),
-                              const SizedBox(height: 14),
-                              _textArea('Safety Interventions', _interventions),
-                              _textArea('Disruptions', _disruptions),
-                              _textArea('Application Issues', _issues),
-                            ],
+                            ),
                           ),
                         ),
                         const SizedBox(height: 14),
                         _panel(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
+                          child: Opacity(
+                            opacity: _hasRun ? 1 : 0.45,
+                            child: IgnorePointer(
+                              ignoring: !_hasRun,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
                               const _SectionTitle('Final Task Outcome'),
                               const SizedBox(height: 14),
                               Row(
@@ -602,7 +608,9 @@ class _EventEntryPageState extends State<EventEntryPage> {
                                   ),
                                 ],
                               ),
-                            ],
+                                ],
+                              ),
+                            ),
                           ),
                         ),
                         const SizedBox(height: 14),

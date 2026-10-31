@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'event_sheet.dart';
 import 'nasa_tlx.dart';
@@ -19,6 +20,32 @@ class ParticipantProfilePage extends StatefulWidget {
 }
 
 class _ParticipantProfilePageState extends State<ParticipantProfilePage> {
+  String _observerName = '';
+  String _observerMatric = '';
+  bool _drawerOpen = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadObserver();
+  }
+
+  Future<void> _loadObserver() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
+    setState(() {
+      _observerName = prefs.getString('observer_name') ?? '';
+      _observerMatric = prefs.getString('observer_matric') ?? '';
+    });
+  }
+
+  Future<void> _logout() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.clear();
+    if (!mounted) return;
+    Navigator.of(context).pushNamedAndRemoveUntil('/', (_) => false);
+  }
+
   Future<void> _addEventLog() async {
     final record = await Navigator.of(context).push<EventRecord>(
       MaterialPageRoute(
@@ -54,15 +81,39 @@ class _ParticipantProfilePageState extends State<ParticipantProfilePage> {
         appBar: AppBar(
           backgroundColor: _pale,
           elevation: 0,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back_rounded, color: _ink),
-            onPressed: () => Navigator.pop(context),
+          leading: Builder(builder: (context) => IconButton(
+            tooltip: 'Observer profile',
+            icon: const Icon(Icons.menu_rounded, color: _ink),
+            onPressed: () => Scaffold.of(context).openDrawer(),
+          )),
+          title: AnimatedPadding(
+            duration: const Duration(milliseconds: 320),
+            curve: Curves.easeOutCubic,
+            padding: EdgeInsets.only(left: _drawerOpen ? 180 : 0),
+            child: Text(participant.name, style: const TextStyle(color: _ink, fontWeight: FontWeight.w700)),
           ),
-          title: Text(
-            participant.name,
-            style: const TextStyle(color: _ink, fontWeight: FontWeight.w700),
-          ),
+          actions: [
+            Padding(
+              padding: const EdgeInsets.only(right: 12),
+              child: IconButton(
+                tooltip: 'Back',
+                icon: const Icon(Icons.arrow_back_rounded, color: _ink),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ),
+          ],
         ),
+        onDrawerChanged: (opened) => setState(() => _drawerOpen = opened),
+        drawer: Drawer(backgroundColor: _pale, child: SafeArea(child: Column(children: [
+          const SizedBox(height: 36),
+          const CircleAvatar(radius: 44, backgroundColor: Colors.white, child: Icon(Icons.person, size: 54, color: _blue)),
+          const SizedBox(height: 18),
+          Padding(padding: const EdgeInsets.symmetric(horizontal: 20), child: Text(_observerName, textAlign: TextAlign.center, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: _ink))),
+          const SizedBox(height: 6), Text(_observerMatric, style: const TextStyle(color: _muted)),
+          const Spacer(),
+          ListTile(leading: const Icon(Icons.logout_rounded, color: _blue), title: const Text('Logout', style: TextStyle(color: _ink, fontWeight: FontWeight.w600)), onTap: _logout),
+          const SizedBox(height: 12),
+        ]))),
         body: SafeArea(
           child: Column(
             children: [
@@ -106,6 +157,8 @@ class _ParticipantProfilePageState extends State<ParticipantProfilePage> {
                                 ),
                               ),
                               const SizedBox(height: 3),
+                              Text(participant.matricNumber, style: const TextStyle(color: _muted, fontSize: 13)),
+                              const SizedBox(height: 5),
                               Text(
                                 '${participant.events.length} event logs · ${participant.surveys.length} surveys',
                                 style: const TextStyle(
@@ -298,7 +351,7 @@ class _ParticipantProfilePageState extends State<ParticipantProfilePage> {
               Icons.chevron_right_rounded,
               color: _muted,
             ),
-            onTap: () => showEventDetailDialog(context, record),
+            onTap: () => showEventDetailDialog(context, record, matricNumber: widget.participant.matricNumber),
           ),
         );
       },
@@ -391,7 +444,7 @@ class _ParticipantProfilePageState extends State<ParticipantProfilePage> {
               Icons.chevron_right_rounded,
               color: _muted,
             ),
-            onTap: () => showSurveyDetailDialog(context, survey),
+            onTap: () => showSurveyDetailDialog(context, survey, matricNumber: widget.participant.matricNumber),
           ),
         );
       },

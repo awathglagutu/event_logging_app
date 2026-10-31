@@ -20,7 +20,7 @@ class SurveyRecord {
   final List<int> values;
 }
 
-void showSurveyDetailDialog(BuildContext context, SurveyRecord record) =>
+void showSurveyDetailDialog(BuildContext context, SurveyRecord record, {String matricNumber = ''}) =>
     showDialog<void>(
       context: context,
       builder: (context) => Dialog(
@@ -52,6 +52,10 @@ void showSurveyDetailDialog(BuildContext context, SurveyRecord record) =>
                 ],
               ),
               const Text('Task load responses', style: TextStyle(color: _muted)),
+              if (matricNumber.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Text('Matric number  $matricNumber', style: const TextStyle(color: _muted)),
+              ],
               const SizedBox(height: 16),
               Flexible(
                 child: SingleChildScrollView(
