@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 
-import 'event_sheet.dart';
-import 'nasa_tlx.dart';
+import 'participant.dart';
+import 'participant_profile_page.dart';
 
 const _ink = Color(0xFF17243A);
+const _muted = Color(0xFF7A8798);
 const _blue = Color(0xFF356AE6);
 const _pale = Color(0xFFF4F7FC);
 
@@ -11,6 +12,7 @@ void main() => runApp(const MyApp());
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
+
   @override
   Widget build(BuildContext context) => MaterialApp(
     title: 'Fieldwork',
@@ -21,136 +23,264 @@ class MyApp extends StatelessWidget {
       colorScheme: ColorScheme.fromSeed(seedColor: _blue, surface: _pale),
       fontFamily: 'Roboto',
     ),
-    home: const AppShell(),
+    home: const ParticipantsDashboard(),
   );
 }
 
-class AppShell extends StatefulWidget {
-  const AppShell({super.key});
+class ParticipantsDashboard extends StatefulWidget {
+  const ParticipantsDashboard({super.key});
+
   @override
-  State<AppShell> createState() => _AppShellState();
+  State<ParticipantsDashboard> createState() => _ParticipantsDashboardState();
 }
 
-class _AppShellState extends State<AppShell> {
-  int _selected = 0;
-  final _pages = const [RecordsPage(), EventSheetPage()];
+class _ParticipantsDashboardState extends State<ParticipantsDashboard> {
+  final List<Participant> _participants = [];
+
+  Future<void> _registerParticipant() async {
+    final controller = TextEditingController();
+    final name = await showDialog<String>(
+      context: context,
+      builder: (context) => Dialog(
+        insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 22, 24, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Expanded(
+                    child: Text(
+                      'New Participant',
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w700,
+                        color: _ink,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close_rounded),
+                    tooltip: 'Close',
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                'Enter participant name to begin tracking trials and surveys.',
+                style: TextStyle(color: _muted),
+              ),
+              const SizedBox(height: 20),
+              TextField(
+                controller: controller,
+                autofocus: true,
+                textCapitalization: TextCapitalization.words,
+                decoration: InputDecoration(
+                  hintText: 'Participant name',
+                  hintStyle: const TextStyle(color: _muted),
+                  filled: true,
+                  fillColor: _pale,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: BorderSide.none,
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 14,
+                  ),
+                ),
+                onSubmitted: (val) {
+                  final trimmed = val.trim();
+                  if (trimmed.isNotEmpty) {
+                    Navigator.pop(context, trimmed);
+                  }
+                },
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size(0, 48),
+                        foregroundColor: _ink,
+                        side: const BorderSide(color: Color(0xFFDCE3ED)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      child: const Text('Cancel'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: FilledButton(
+                      onPressed: () {
+                        final text = controller.text.trim();
+                        if (text.isNotEmpty) {
+                          Navigator.pop(context, text);
+                        }
+                      },
+                      style: FilledButton.styleFrom(
+                        backgroundColor: _blue,
+                        foregroundColor: Colors.white,
+                        minimumSize: const Size(0, 48),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      child: const Text('Register'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (name != null && name.isNotEmpty && mounted) {
+      setState(() {
+        final id = 'P-${_participants.length + 1}';
+        _participants.insert(
+          0,
+          Participant(
+            id: id,
+            name: name,
+          ),
+        );
+      });
+    }
+  }
+
+  Future<void> _openProfile(Participant participant) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ParticipantProfilePage(participant: participant),
+      ),
+    );
+    if (mounted) setState(() {});
+  }
+
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
       backgroundColor: _pale,
-      leading: Builder(
-        builder: (context) => Padding(
-          padding: const EdgeInsets.only(left: 12),
-          child: IconButton(
-            icon: const Icon(Icons.segment_rounded, color: _ink),
-            tooltip: 'Open navigation',
-            onPressed: () => Scaffold.of(context).openDrawer(),
-          ),
-        ),
-      ),
-      leadingWidth: 64,
-      title: Text(
-        _selected == 0 ? 'NASA-TLX' : 'Event-Sheet',
-        style: const TextStyle(color: _ink, fontWeight: FontWeight.w700),
+      elevation: 0,
+      title: const Text(
+        'Participants',
+        style: TextStyle(color: _ink, fontWeight: FontWeight.w700),
       ),
     ),
-    drawer: Drawer(
-      width: 290,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.horizontal(right: Radius.circular(24)),
-      ),
-      child: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 26, 20, 24),
-              child: Row(
+    body: _participants.isEmpty
+        ? Center(
+            child: Padding(
+              padding: const EdgeInsets.all(32),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Container(
-                    width: 44,
-                    height: 44,
+                    width: 76,
+                    height: 76,
                     decoration: BoxDecoration(
-                      color: const Color(0xFFEAF0FF),
-                      borderRadius: BorderRadius.circular(14),
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(24),
                     ),
                     child: const Icon(
-                      Icons.track_changes_rounded,
+                      Icons.people_alt_rounded,
                       color: _blue,
+                      size: 36,
                     ),
                   ),
-                  const SizedBox(width: 13),
-                  const Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Fieldwork',
-                        style: TextStyle(
-                          color: _ink,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      Text(
-                        'Assessment tools',
-                        style: TextStyle(
-                          color: Color(0xFF7A8798),
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
+                  const SizedBox(height: 20),
+                  const Text(
+                    'No participants yet',
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w700,
+                      color: _ink,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Register a participant to begin logging event sheets and NASA-TLX surveys.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: _muted, height: 1.5),
                   ),
                 ],
               ),
             ),
-            const Padding(
-              padding: EdgeInsets.fromLTRB(24, 0, 20, 10),
-              child: Text(
-                'WORKSPACE',
+          )
+        : ListView(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
+            children: [
+              const Text(
+                'REGISTERED PARTICIPANTS',
                 style: TextStyle(
-                  color: Color(0xFF7A8798),
-                  fontSize: 11,
+                  color: _muted,
+                  fontSize: 12,
                   letterSpacing: 1.4,
                   fontWeight: FontWeight.w700,
                 ),
               ),
-            ),
-            _navItem(context, 0, Icons.insights_rounded, 'NASA-TLX'),
-            _navItem(context, 1, Icons.route_rounded, 'Event-Sheet'),
-          ],
-        ),
-      ),
-    ),
-    body: IndexedStack(index: _selected, children: _pages),
-  );
-
-  Widget _navItem(
-    BuildContext context,
-    int index,
-    IconData icon,
-    String label,
-  ) {
-    final active = _selected == index;
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
-      child: ListTile(
-        selected: active,
-        selectedTileColor: const Color(0xFFEAF0FF),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        leading: Icon(icon, color: active ? _blue : const Color(0xFF7A8798)),
-        title: Text(
-          label,
-          style: TextStyle(
-            color: active ? _blue : _ink,
-            fontWeight: active ? FontWeight.w700 : FontWeight.w500,
+              const SizedBox(height: 12),
+              for (final participant in _participants)
+                Card(
+                  color: Colors.white,
+                  elevation: 0,
+                  margin: const EdgeInsets.only(bottom: 10),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  child: ListTile(
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 7,
+                    ),
+                    leading: CircleAvatar(
+                      backgroundColor: const Color(0xFFEAF0FF),
+                      child: Text(
+                        participant.name.trim().isEmpty
+                            ? '?'
+                            : participant.name.trim()[0].toUpperCase(),
+                        style: const TextStyle(
+                          color: _blue,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    title: Text(
+                      participant.name,
+                      style: const TextStyle(
+                        color: _ink,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    subtitle: Text(
+                      '${participant.events.length} event logs · ${participant.surveys.length} surveys',
+                      style: const TextStyle(color: _muted),
+                    ),
+                    trailing: const Icon(
+                      Icons.chevron_right_rounded,
+                      color: _muted,
+                    ),
+                    onTap: () => _openProfile(participant),
+                  ),
+                ),
+            ],
           ),
-        ),
-        onTap: () {
-          setState(() => _selected = index);
-          Navigator.pop(context);
-        },
-      ),
-    );
-  }
+    floatingActionButton: FloatingActionButton.extended(
+      onPressed: _registerParticipant,
+      backgroundColor: _blue,
+      foregroundColor: Colors.white,
+      icon: const Icon(Icons.person_add_rounded),
+      label: const Text('New participant'),
+    ),
+  );
 }

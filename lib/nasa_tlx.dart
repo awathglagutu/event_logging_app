@@ -4,6 +4,7 @@ const _ink = Color(0xFF17243A);
 const _muted = Color(0xFF7A8798);
 const _blue = Color(0xFF356AE6);
 const _pale = Color(0xFFF4F7FC);
+
 const _questions = <String>[
   'How mentally demanding was the task?',
   'How physically demanding was the task?',
@@ -12,11 +13,101 @@ const _questions = <String>[
   'How hard did you have to work to accomplish your level of performance?',
   'How insecure, discouraged, irritated, stressed and annoyed were you?',
 ];
+
 class SurveyRecord {
   SurveyRecord(this.name, this.values);
   final String name;
   final List<int> values;
 }
+
+void showSurveyDetailDialog(BuildContext context, SurveyRecord record) =>
+    showDialog<void>(
+      context: context,
+      builder: (context) => Dialog(
+        insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 22, 24, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      record.name,
+                      style: const TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w700,
+                        color: _ink,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close_rounded),
+                    tooltip: 'Close',
+                  ),
+                ],
+              ),
+              const Text('Task load responses', style: TextStyle(color: _muted)),
+              const SizedBox(height: 16),
+              Flexible(
+                child: SingleChildScrollView(
+                  child: Column(
+                    children: [
+                      for (var i = 0; i < _questions.length; i++)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 14),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  _questions[i],
+                                  style: const TextStyle(
+                                    color: _ink,
+                                    height: 1.35,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Text(
+                                '${record.values[i]}%',
+                                style: const TextStyle(
+                                  color: _blue,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: _blue,
+                    foregroundColor: Colors.white,
+                    minimumSize: const Size(0, 48),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                  child: const Text('Close'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
 
 class RecordsPage extends StatefulWidget {
   const RecordsPage({super.key});
@@ -29,91 +120,13 @@ class _RecordsPageState extends State<RecordsPage> {
   final List<SurveyRecord> _records = [];
 
   Future<void> _addRecord() async {
-    final record = await Navigator.of(
-      context,
-    ).push<SurveyRecord>(MaterialPageRoute(builder: (_) => const SurveyPage()));
+    final record = await Navigator.of(context).push<SurveyRecord>(
+      MaterialPageRoute(
+        builder: (_) => const SurveyPage(participantName: 'Participant'),
+      ),
+    );
     if (record != null && mounted) setState(() => _records.insert(0, record));
   }
-
-  void _showRecord(SurveyRecord record) => showDialog<void>(
-    context: context,
-    builder: (context) => Dialog(
-      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(24, 22, 24, 20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    record.name,
-                    style: const TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w700,
-                      color: _ink,
-                    ),
-                  ),
-                ),
-                IconButton(
-                  onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Icons.close_rounded),
-                  tooltip: 'Close',
-                ),
-              ],
-            ),
-            const Text('Task load responses', style: TextStyle(color: _muted)),
-            const SizedBox(height: 16),
-            Flexible(
-              child: SingleChildScrollView(
-                child: Column(
-                  children: [
-                    for (var i = 0; i < _questions.length; i++)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 14),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(
-                              child: Text(
-                                _questions[i],
-                                style: const TextStyle(
-                                  color: _ink,
-                                  height: 1.35,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Text(
-                              '${record.values[i]}%',
-                              style: const TextStyle(
-                                color: _blue,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 8),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Close'),
-              ),
-            ),
-          ],
-        ),
-      ),
-    ),
-  );
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -209,7 +222,7 @@ class _RecordsPageState extends State<RecordsPage> {
                       Icons.chevron_right_rounded,
                       color: _muted,
                     ),
-                    onTap: () => _showRecord(_records[i]),
+                    onTap: () => showSurveyDetailDialog(context, _records[i]),
                   ),
                 ),
             ],
@@ -225,48 +238,44 @@ class _RecordsPageState extends State<RecordsPage> {
 }
 
 class SurveyPage extends StatefulWidget {
-  const SurveyPage({super.key});
+  const SurveyPage({super.key, required this.participantName});
+
+  final String participantName;
+
   @override
   State<SurveyPage> createState() => _SurveyPageState();
 }
 
 class _SurveyPageState extends State<SurveyPage> {
-  final TextEditingController _nameController = TextEditingController();
   // This map retains all answers while moving back and forth through the form.
   final Map<int, int> _answers = {
     for (var i = 0; i < _questions.length; i++) i: 0,
   };
-  int _step = -1; // -1 is the participant name step.
-
-  @override
-  void dispose() {
-    _nameController.dispose();
-    super.dispose();
-  }
+  int _step = 0; // Starts directly on Question 1 (index 0)
 
   void _continue() {
-    if (_step == -1 && _nameController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a name to continue.')),
-      );
-      return;
+    if (_step < _questions.length - 1) {
+      setState(() => _step++);
     }
-    setState(() => _step++);
   }
 
-  void _previous() => setState(() => _step--);
+  void _previous() {
+    if (_step > 0) {
+      setState(() => _step--);
+    }
+  }
+
   void _finish() => Navigator.of(context).pop(
     SurveyRecord(
-      _nameController.text.trim(),
+      widget.participantName,
       List.generate(_questions.length, (i) => _answers[i] ?? 0),
     ),
   );
 
   @override
   Widget build(BuildContext context) {
-    final isNameStep = _step == -1;
     final questionIndex = _step;
-    final progress = isNameStep ? 0.0 : (questionIndex + 1) / _questions.length;
+    final progress = (questionIndex + 1) / _questions.length;
     return Scaffold(
       appBar: AppBar(
         backgroundColor: _pale,
@@ -295,9 +304,7 @@ class _SurveyPageState extends State<SurveyPage> {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text(
-                              isNameStep
-                                  ? 'GETTING STARTED'
-                                  : 'QUESTION ${questionIndex + 1} OF ${_questions.length}',
+                              'QUESTION ${questionIndex + 1} OF ${_questions.length}',
                               style: const TextStyle(
                                 color: _blue,
                                 fontSize: 12,
@@ -305,33 +312,28 @@ class _SurveyPageState extends State<SurveyPage> {
                                 fontWeight: FontWeight.w700,
                               ),
                             ),
-                            if (!isNameStep)
-                              Text(
-                                '${(progress * 100).round()}%',
-                                style: const TextStyle(
-                                  color: _muted,
-                                  fontSize: 13,
-                                ),
+                            Text(
+                              '${(progress * 100).round()}%',
+                              style: const TextStyle(
+                                color: _muted,
+                                fontSize: 13,
                               ),
+                            ),
                           ],
                         ),
-                        if (!isNameStep) ...[
-                          const SizedBox(height: 12),
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(5),
-                            child: LinearProgressIndicator(
-                              value: progress,
-                              minHeight: 6,
-                              backgroundColor: const Color(0xFFE3E9F2),
-                              color: _blue,
-                            ),
+                        const SizedBox(height: 12),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(5),
+                          child: LinearProgressIndicator(
+                            value: progress,
+                            minHeight: 6,
+                            backgroundColor: const Color(0xFFE3E9F2),
+                            color: _blue,
                           ),
-                        ],
+                        ),
                         const SizedBox(height: 36),
                         Text(
-                          isNameStep
-                              ? 'Who’s taking\nthe assessment?'
-                              : _questions[questionIndex],
+                          _questions[questionIndex],
                           style: const TextStyle(
                             fontSize: 30,
                             height: 1.2,
@@ -341,116 +343,78 @@ class _SurveyPageState extends State<SurveyPage> {
                           ),
                         ),
                         const SizedBox(height: 12),
-                        Text(
-                          isNameStep
-                              ? 'Add a name so you can recognize this record later.'
-                              : 'Rate your experience with this task.',
-                          style: const TextStyle(
+                        const Text(
+                          'Rate your experience with this task.',
+                          style: TextStyle(
                             color: _muted,
                             fontSize: 15,
                             height: 1.5,
                           ),
                         ),
                         const SizedBox(height: 34),
-                        if (isNameStep) ...[
-                          const Text(
-                            'YOUR NAME',
-                            style: TextStyle(
-                              color: _muted,
-                              fontSize: 12,
-                              letterSpacing: 1,
-                              fontWeight: FontWeight.w700,
-                            ),
+                        Container(
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(20),
                           ),
-                          const SizedBox(height: 10),
-                          TextField(
-                            controller: _nameController,
-                            minLines: 1,
-                            maxLines: 3,
-                            textCapitalization: TextCapitalization.words,
-                            textInputAction: TextInputAction.done,
-                            onSubmitted: (_) => _continue(),
-                            decoration: InputDecoration(
-                              hintText: 'Enter your name',
-                              filled: true,
-                              fillColor: Colors.white,
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(16),
-                                borderSide: BorderSide.none,
-                              ),
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 18,
-                                vertical: 18,
-                              ),
-                            ),
-                          ),
-                        ] else ...[
-                          Container(
-                            padding: const EdgeInsets.all(20),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    const Text(
-                                      'Selected Value:',
-                                      style: TextStyle(
-                                        color: _muted,
-                                        fontSize: 14,
-                                      ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  const Text(
+                                    'Selected Value:',
+                                    style: TextStyle(
+                                      color: _muted,
+                                      fontSize: 14,
                                     ),
-                                    const Spacer(),
-                                    Text(
-                                      '${_answers[questionIndex]}%',
-                                      style: const TextStyle(
-                                        color: _blue,
-                                        fontWeight: FontWeight.w700,
-                                        fontSize: 22,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 18),
-                                Slider(
-                                  value: (_answers[questionIndex] ?? 0)
-                                      .toDouble(),
-                                  min: 0,
-                                  max: 100,
-                                  divisions: 20,
-                                  activeColor: _blue,
-                                  onChanged: (value) => setState(
-                                    () =>
-                                        _answers[questionIndex] = value.round(),
                                   ),
-                                ),
-                                const Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text(
-                                      'Very Low',
-                                      style: TextStyle(
-                                        color: _muted,
-                                        fontSize: 12,
-                                      ),
+                                  const Spacer(),
+                                  Text(
+                                    '${_answers[questionIndex]}%',
+                                    style: const TextStyle(
+                                      color: _blue,
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 22,
                                     ),
-                                    Text(
-                                      'Very High',
-                                      style: TextStyle(
-                                        color: _muted,
-                                        fontSize: 12,
-                                      ),
-                                    ),
-                                  ],
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 18),
+                              Slider(
+                                value: (_answers[questionIndex] ?? 0).toDouble(),
+                                min: 0,
+                                max: 100,
+                                divisions: 20,
+                                activeColor: _blue,
+                                onChanged: (value) => setState(
+                                  () => _answers[questionIndex] = value.round(),
                                 ),
-                              ],
-                            ),
+                              ),
+                              const Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    'Very Low',
+                                    style: TextStyle(
+                                      color: _muted,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                  Text(
+                                    'Very High',
+                                    style: TextStyle(
+                                      color: _muted,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
                           ),
-                        ],
+                        ),
                       ],
                     ),
                   ),
@@ -464,7 +428,7 @@ class _SurveyPageState extends State<SurveyPage> {
                   constraints: const BoxConstraints(maxWidth: 560),
                   child: Row(
                     children: [
-                      if (!isNameStep)
+                      if (questionIndex > 0) ...[
                         Expanded(
                           child: OutlinedButton.icon(
                             onPressed: _previous,
@@ -483,24 +447,21 @@ class _SurveyPageState extends State<SurveyPage> {
                             ),
                           ),
                         ),
-                      if (!isNameStep) const SizedBox(width: 12),
+                        const SizedBox(width: 12),
+                      ],
                       Expanded(
                         child: FilledButton.icon(
-                          onPressed: isNameStep
-                              ? _continue
-                              : questionIndex == _questions.length - 1
+                          onPressed: questionIndex == _questions.length - 1
                               ? _finish
                               : _continue,
                           icon: Icon(
-                            isNameStep || questionIndex < _questions.length - 1
-                                ? Icons.arrow_forward_rounded
-                                : Icons.check_rounded,
+                            questionIndex == _questions.length - 1
+                                ? Icons.check_rounded
+                                : Icons.arrow_forward_rounded,
                             size: 18,
                           ),
                           label: Text(
-                            isNameStep
-                                ? 'Continue'
-                                : questionIndex == _questions.length - 1
+                            questionIndex == _questions.length - 1
                                 ? 'Finish'
                                 : 'Next',
                           ),
@@ -525,4 +486,3 @@ class _SurveyPageState extends State<SurveyPage> {
     );
   }
 }
-
