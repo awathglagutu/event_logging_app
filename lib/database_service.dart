@@ -12,7 +12,7 @@ class DatabaseService {
 
   static final DatabaseService instance = DatabaseService._();
   static const _databaseName = 'fieldwork.db';
-  static const _databaseVersion = 1;
+  static const _databaseVersion = 3;
   Database? _database;
 
   Future<Database> get database async {
@@ -44,6 +44,9 @@ class DatabaseService {
             success INTEGER NOT NULL,
             checked_labels TEXT NOT NULL,
             explanation TEXT NOT NULL,
+            external_help TEXT NOT NULL DEFAULT '[false,false,false]',
+            application TEXT,
+            route TEXT,
             FOREIGN KEY (participant_id) REFERENCES participants(id) ON DELETE CASCADE
           )
         ''');
@@ -53,9 +56,23 @@ class DatabaseService {
             participant_id TEXT NOT NULL,
             name TEXT NOT NULL,
             survey_values TEXT NOT NULL,
+            application TEXT,
+            route TEXT,
             FOREIGN KEY (participant_id) REFERENCES participants(id) ON DELETE CASCADE
           )
         ''');
+      },
+      onUpgrade: (db, oldVersion, newVersion) async {
+        if (oldVersion < 2) {
+          await db.execute("ALTER TABLE event_records ADD COLUMN external_help TEXT NOT NULL DEFAULT '[false,false,false]'");
+          await db.execute('ALTER TABLE event_records ADD COLUMN application TEXT');
+          await db.execute('ALTER TABLE event_records ADD COLUMN route TEXT');
+          await db.execute('UPDATE event_records SET success = CASE WHEN success = 1 THEN 0 ELSE 1 END');
+        }
+        if (oldVersion < 3) {
+          await db.execute('ALTER TABLE survey_records ADD COLUMN application TEXT');
+          await db.execute('ALTER TABLE survey_records ADD COLUMN route TEXT');
+        }
       },
     );
     return _database!;
@@ -158,15 +175,20 @@ class DatabaseService {
     'interventions': record.interventions,
     'disruptions': record.disruptions,
     'issues': record.issues,
-    'success': record.success ? 1 : 0,
+    'success': record.success.index,
     'checked_labels': jsonEncode(record.checked),
     'explanation': record.explanation,
+    'external_help': jsonEncode(record.externalHelp),
+    'application': record.application,
+    'route': record.route,
   };
 
   Map<String, Object?> _surveyValues(String participantId, SurveyRecord record) => {
     'participant_id': participantId,
     'name': record.name,
     'survey_values': jsonEncode(record.values),
+    'application': record.application,
+    'route': record.route,
   };
 
   Future<Participant> _participantFromRow(Database db, Map<String, Object?> row) async {
@@ -191,14 +213,19 @@ class DatabaseService {
     interventions: row['interventions'] as String,
     disruptions: row['disruptions'] as String,
     issues: row['issues'] as String,
-    success: (row['success'] as int) == 1,
+    success: EventOutcome.values[(row['success'] as int).clamp(0, 2).toInt()],
     checked: (jsonDecode(row['checked_labels'] as String) as List).cast<bool>(),
     explanation: row['explanation'] as String,
+    externalHelp: (jsonDecode((row['external_help'] as String?) ?? '[false,false,false]') as List).cast<bool>(),
+    application: row['application'] as String?,
+    route: row['route'] as String?,
   );
 
   SurveyRecord _surveyFromRow(Map<String, Object?> row) => SurveyRecord(
     row['name'] as String,
     (jsonDecode(row['survey_values'] as String) as List).cast<int>(),
     databaseId: row['id'] as int,
+    application: row['application'] as String?,
+    route: row['route'] as String?,
   );
 }

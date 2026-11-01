@@ -12,6 +12,8 @@ const _qualLabels = <String>[
   'Route choice difficulty',
   'Arrival point recognition',
 ];
+const _externalHelpLabels = <String>['Using external navigation', 'Asking for directions', 'Task termination'];
+enum EventOutcome { successful, unsuccessful, terminated }
 
 class EventRecord {
   EventRecord({
@@ -26,6 +28,9 @@ class EventRecord {
     required this.success,
     required this.checked,
     required this.explanation,
+    this.externalHelp = const [false, false, false],
+    this.application,
+    this.route,
   });
   int? databaseId;
   final String name;
@@ -35,9 +40,12 @@ class EventRecord {
   final String interventions;
   final String disruptions;
   final String issues;
-  final bool success;
+  final EventOutcome success;
   final List<bool> checked;
   final String explanation;
+  final List<bool> externalHelp;
+  final String? application;
+  final String? route;
 }
 
 String clockString(Duration duration) {
@@ -94,11 +102,18 @@ void showEventDetailDialog(BuildContext context, EventRecord record, {String mat
                     children: [
                       _detailGroup('Timer & outcome', [
                         'Completion time  ${_clock(record.elapsed)}',
-                        'Success  ${record.success ? '✓' : '✕'}',
+                        'Outcome  ${record.success.name[0].toUpperCase()}${record.success.name.substring(1)}',
                       ]),
                       _detailGroup('Navigation Errors & Behaviors', [
                         'Wrong Turns  ${record.wrongTurns}',
                         'Hesitation & safe Map Checking  ${record.mapChecks}',
+                      ]),
+                      _detailGroup('External Help & Violations', [
+                        for (var i = 0; i < 3; i++) '${record.externalHelp[i] ? '✓' : '□'}  ${_externalHelpLabels[i]}',
+                      ]),
+                      _detailGroup('Application & Route', [
+                        'Application  ${record.application ?? '—'}',
+                        'Route  ${record.route ?? '—'}',
                       ]),
                       _detailGroup('Safety Stops & Environmental Disruptions', [
                         'Safety Interventions  ${_value(record.interventions)}',
@@ -240,7 +255,7 @@ class _EventSheetPageState extends State<EventSheetPage> {
                       ),
                     ),
                     subtitle: Text(
-                      'Completion ${_clock(record.elapsed)} · ${record.success ? 'Successful' : 'Over time'}',
+                      'Completion ${_clock(record.elapsed)} · ${record.success.name}',
                       style: const TextStyle(color: _muted),
                     ),
                     trailing: const Icon(
@@ -283,9 +298,11 @@ Widget _detailGroup(String title, List<String> lines) => Padding(
 );
 
 class EventEntryPage extends StatefulWidget {
-  const EventEntryPage({super.key, required this.participantName});
+  const EventEntryPage({super.key, required this.participantName, this.application, this.route});
 
   final String participantName;
+  final String? application;
+  final String? route;
 
   @override
   State<EventEntryPage> createState() => _EventEntryPageState();
@@ -306,6 +323,13 @@ class _EventEntryPageState extends State<EventEntryPage> {
   int _wrongTurns = 0;
   int _mapChecks = 0;
   final List<bool> _checked = List.filled(4, false);
+  final List<bool> _externalHelp = List.filled(3, false);
+
+  EventOutcome get _currentOutcome {
+    if (_interventions.text.isNotEmpty || _disruptions.text.isNotEmpty || _issues.text.isNotEmpty) return EventOutcome.terminated;
+    if (_externalHelp.any((checked) => checked) || _elapsed >= const Duration(minutes: 15)) return EventOutcome.unsuccessful;
+    return EventOutcome.successful;
+  }
 
   @override
   void dispose() {
@@ -379,9 +403,16 @@ class _EventEntryPageState extends State<EventEntryPage> {
         interventions: _interventions.text,
         disruptions: _disruptions.text,
         issues: _issues.text,
-        success: _elapsed < const Duration(minutes: 15),
+        success: _interventions.text.isNotEmpty || _disruptions.text.isNotEmpty || _issues.text.isNotEmpty
+            ? EventOutcome.terminated
+            : _externalHelp.any((checked) => checked) || _elapsed >= const Duration(minutes: 15)
+                ? EventOutcome.unsuccessful
+                : EventOutcome.successful,
         checked: List.of(_checked),
         explanation: _explanation.text,
+        externalHelp: List.of(_externalHelp),
+        application: widget.application,
+        route: widget.route,
       ),
     );
   }
@@ -404,6 +435,22 @@ class _EventEntryPageState extends State<EventEntryPage> {
           style: TextStyle(color: _ink, fontWeight: FontWeight.w700),
         ),
       ),
+      floatingActionButton: _running ? Padding(
+        padding: const EdgeInsets.only(bottom: 88),
+        child: Material(
+          elevation: 5,
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(24),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              const Icon(Icons.timer_rounded, size: 17, color: _blue),
+              const SizedBox(width: 7),
+              Text(_clock(_elapsed), style: const TextStyle(color: _ink, fontWeight: FontWeight.w700)),
+            ]),
+          ),
+        ),
+      ) : null,
       body: SafeArea(
         child: Column(
           children: [
@@ -508,6 +555,33 @@ class _EventEntryPageState extends State<EventEntryPage> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
+                                  const _SectionTitle('External Help & Violations'),
+                                  const SizedBox(height: 8),
+                                  for (var i = 0; i < 3; i++) Material(
+                                    color: Colors.transparent,
+                                    child: CheckboxListTile(
+                                      contentPadding: EdgeInsets.zero,
+                                      dense: true,
+                                      title: Text(_externalHelpLabels[i], style: const TextStyle(color: _ink)),
+                                      value: _externalHelp[i],
+                                      controlAffinity: ListTileControlAffinity.trailing,
+                                      onChanged: (value) => setState(() => _externalHelp[i] = value ?? false),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                        _panel(
+                          child: Opacity(
+                            opacity: _hasRun ? 1 : 0.45,
+                            child: IgnorePointer(
+                              ignoring: !_hasRun,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
                                   const _SectionTitle('Navigation Errors & Behaviors'),
                                   const SizedBox(height: 10),
                                   _CounterRow(label: 'Wrong Turns', value: _wrongTurns, onChanged: (v) => setState(() => _wrongTurns = v)),
@@ -564,12 +638,7 @@ class _EventEntryPageState extends State<EventEntryPage> {
                                       borderRadius: BorderRadius.circular(12),
                                     ),
                                     child: Text(
-                                      !_stopped
-                                          ? '—'
-                                          : _elapsed <
-                                                const Duration(minutes: 15)
-                                          ? '✓'
-                                          : '✕',
+                                      !_stopped ? '—' : _currentOutcome.name,
                                       style: TextStyle(
                                         fontSize: 22,
                                         fontWeight: FontWeight.w700,
@@ -636,7 +705,9 @@ class _EventEntryPageState extends State<EventEntryPage> {
                                     ),
                                   ),
                                   for (var i = 0; i < _qualLabels.length; i++)
-                                    CheckboxListTile(
+                                    Material(
+                                      color: Colors.transparent,
+                                      child: CheckboxListTile(
                                       dense: true,
                                       contentPadding: EdgeInsets.zero,
                                       controlAffinity:
@@ -652,6 +723,7 @@ class _EventEntryPageState extends State<EventEntryPage> {
                                       ),
                                       onChanged: (v) => setState(
                                         () => _checked[i] = v ?? false,
+                                      ),
                                       ),
                                     ),
                                   const SizedBox(height: 8),

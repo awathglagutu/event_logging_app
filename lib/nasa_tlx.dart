@@ -15,10 +15,12 @@ const _questions = <String>[
 ];
 
 class SurveyRecord {
-  SurveyRecord(this.name, this.values, {this.databaseId});
+  SurveyRecord(this.name, this.values, {this.databaseId, this.application, this.route});
   int? databaseId;
   final String name;
   final List<int> values;
+  final String? application;
+  final String? route;
 }
 
 void showSurveyDetailDialog(BuildContext context, SurveyRecord record, {String matricNumber = ''}) =>
@@ -53,6 +55,10 @@ void showSurveyDetailDialog(BuildContext context, SurveyRecord record, {String m
                 ],
               ),
               const Text('Task load responses', style: TextStyle(color: _muted)),
+              const SizedBox(height: 10),
+              Text('Application  ${record.application ?? '—'}', style: const TextStyle(color: _ink)),
+              const SizedBox(height: 4),
+              Text('Route  ${record.route ?? '—'}', style: const TextStyle(color: _ink)),
               if (matricNumber.isNotEmpty) ...[
                 const SizedBox(height: 8),
                 Text('Matric number  $matricNumber', style: const TextStyle(color: _muted)),
@@ -243,9 +249,11 @@ class _RecordsPageState extends State<RecordsPage> {
 }
 
 class SurveyPage extends StatefulWidget {
-  const SurveyPage({super.key, required this.participantName});
+  const SurveyPage({super.key, required this.participantName, this.application, this.route});
 
   final String participantName;
+  final String? application;
+  final String? route;
 
   @override
   State<SurveyPage> createState() => _SurveyPageState();
@@ -274,6 +282,8 @@ class _SurveyPageState extends State<SurveyPage> {
     SurveyRecord(
       widget.participantName,
       List.generate(_questions.length, (i) => _answers[i] ?? 0),
+      application: widget.application,
+      route: widget.route,
     ),
   );
 

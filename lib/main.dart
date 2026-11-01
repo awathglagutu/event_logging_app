@@ -18,7 +18,7 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => MaterialApp(
-    title: 'Fieldwork',
+    title: 'Event Logger',
     debugShowCheckedModeBanner: false,
     theme: ThemeData(
       useMaterial3: true,
@@ -81,7 +81,7 @@ class _SplashPageState extends State<SplashPage> {
             ),
           ),
           const SizedBox(height: 24),
-          const Text('Fieldwork', style: TextStyle(fontSize: 30, fontWeight: FontWeight.w800, letterSpacing: -0.5, color: _ink)),
+          const Text('Event Logger', style: TextStyle(fontSize: 30, fontWeight: FontWeight.w800, letterSpacing: -0.5, color: _ink)),
           const SizedBox(height: 6),
           const Text('Field observation', style: TextStyle(fontSize: 14, color: _muted)),
           const SizedBox(height: 28),
@@ -133,7 +133,6 @@ class _ParticipantsDashboardState extends State<ParticipantsDashboard> {
   final List<Participant> _participants = [];
   String _observerName = '';
   String _observerMatric = '';
-  bool _drawerOpen = false;
   @override
   void initState() { super.initState(); _loadObserver(); _loadParticipants(); }
   Future<void> _loadParticipants() async {
@@ -300,24 +299,35 @@ class _ParticipantsDashboardState extends State<ParticipantsDashboard> {
     if (mounted) setState(() {});
   }
 
+  Future<bool> _confirmParticipantDelete(Participant participant) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete participant?'),
+        content: Text('Delete this Participant, ${participant.name}? This also deletes their event logs and NASA-TLX records.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          FilledButton.tonal(onPressed: () => Navigator.pop(context, true), style: FilledButton.styleFrom(foregroundColor: Colors.red), child: const Text('Delete')),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return false;
+    await DatabaseService.instance.deleteParticipant(participant.id);
+    return mounted;
+  }
+
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
       backgroundColor: _pale,
       elevation: 0,
-      title: AnimatedPadding(
-        duration: const Duration(milliseconds: 320),
-        curve: Curves.easeOutCubic,
-        padding: EdgeInsets.only(left: _drawerOpen ? 180 : 0),
-        child: const Text('Participants', style: TextStyle(color: _ink, fontSize: 28, fontWeight: FontWeight.w800)),
-      ),
+      title: const Text('Participants', style: TextStyle(color: _ink, fontSize: 28, fontWeight: FontWeight.w800)),
       leading: Builder(builder: (context) => IconButton(
         tooltip: 'Observer profile',
         icon: const Icon(Icons.menu_rounded, color: _ink, size: 28),
         onPressed: () => Scaffold.of(context).openDrawer(),
       )),
     ),
-    onDrawerChanged: (opened) => setState(() => _drawerOpen = opened),
     drawer: Drawer(backgroundColor: _pale, child: SafeArea(child: Column(children: [
       const SizedBox(height: 36),
       const CircleAvatar(radius: 44, backgroundColor: Colors.white, child: Icon(Icons.person, size: 54, color: _blue)),
@@ -381,7 +391,19 @@ class _ParticipantsDashboardState extends State<ParticipantsDashboard> {
               ),
               const SizedBox(height: 12),
               for (final participant in _participants)
-                Card(
+                Dismissible(
+                  key: ValueKey('participant-${participant.id}'),
+                  direction: DismissDirection.endToStart,
+                  background: Container(
+                    margin: const EdgeInsets.only(bottom: 10),
+                    padding: const EdgeInsets.only(right: 22),
+                    alignment: Alignment.centerRight,
+                    decoration: BoxDecoration(color: const Color(0xFFD94B4B), borderRadius: BorderRadius.circular(18)),
+                    child: const Icon(Icons.delete_rounded, color: Colors.white),
+                  ),
+                  confirmDismiss: (_) => _confirmParticipantDelete(participant),
+                  onDismissed: (_) => setState(() => _participants.remove(participant)),
+                  child: Card(
                   color: Colors.white,
                   elevation: 0,
                   margin: const EdgeInsets.only(bottom: 10),
@@ -421,6 +443,7 @@ class _ParticipantsDashboardState extends State<ParticipantsDashboard> {
                       color: _muted,
                     ),
                     onTap: () => _openProfile(participant),
+                  ),
                   ),
                 ),
             ],
