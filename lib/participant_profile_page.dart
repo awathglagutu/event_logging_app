@@ -23,7 +23,40 @@ class ParticipantProfilePage extends StatefulWidget {
 class _ParticipantProfilePageState extends State<ParticipantProfilePage> {
   String _observerName = '';
   String _observerMatric = '';
-  bool _drawerOpen = false;
+
+  Future<List<String>?> _chooseApplicationAndRoute() async {
+    String? application;
+    String? route;
+    return showDialog<List<String>>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Choose Application & Route'),
+          content: Column(mainAxisSize: MainAxisSize.min, children: [
+            DropdownButtonFormField<String>(
+              value: application,
+              decoration: const InputDecoration(labelText: 'Application'),
+              hint: const Text('Select an application'),
+              items: const ['UUM Student', 'UniFinder'].map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(),
+              onChanged: (v) => setDialogState(() => application = v),
+            ),
+            const SizedBox(height: 14),
+            DropdownButtonFormField<String>(
+              value: route,
+              decoration: const InputDecoration(labelText: 'Route'),
+              hint: const Text('Select a route'),
+              items: const ['Route A', 'Route B'].map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(),
+              onChanged: (v) => setDialogState(() => route = v),
+            ),
+          ]),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
+            FilledButton(onPressed: application == null || route == null ? null : () => Navigator.pop(dialogContext, [application!, route!]), child: const Text('Confirm')),
+          ],
+        ),
+      ),
+    );
+  }
 
   @override
   void initState() {
@@ -48,9 +81,11 @@ class _ParticipantProfilePageState extends State<ParticipantProfilePage> {
   }
 
   Future<void> _addEventLog() async {
+    final selection = await _chooseApplicationAndRoute();
+    if (selection == null || !mounted) return;
     final record = await Navigator.of(context).push<EventRecord>(
       MaterialPageRoute(
-        builder: (_) => EventEntryPage(participantName: widget.participant.name),
+        builder: (_) => EventEntryPage(participantName: widget.participant.name, application: selection[0], route: selection[1]),
       ),
     );
     if (record != null && mounted) {
@@ -63,9 +98,11 @@ class _ParticipantProfilePageState extends State<ParticipantProfilePage> {
   }
 
   Future<void> _addNasaTlx() async {
+    final selection = await _chooseApplicationAndRoute();
+    if (selection == null || !mounted) return;
     final survey = await Navigator.of(context).push<SurveyRecord>(
       MaterialPageRoute(
-        builder: (_) => SurveyPage(participantName: widget.participant.name),
+        builder: (_) => SurveyPage(participantName: widget.participant.name, application: selection[0], route: selection[1]),
       ),
     );
     if (survey != null && mounted) {
@@ -75,6 +112,35 @@ class _ParticipantProfilePageState extends State<ParticipantProfilePage> {
         widget.participant.surveys.insert(0, survey);
       });
     }
+  }
+
+  Future<bool> _confirmDelete(String type, String name) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Delete $type?'),
+        content: Text('Delete this $type, $name?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          FilledButton.tonal(onPressed: () => Navigator.pop(context, true), style: FilledButton.styleFrom(foregroundColor: Colors.red), child: const Text('Delete')),
+        ],
+      ),
+    );
+    return confirmed == true;
+  }
+
+  Future<bool> _deleteEvent(EventRecord record) async {
+    if (!await _confirmDelete('Log', 'Trial record')) return false;
+    final id = record.databaseId;
+    if (id != null) await DatabaseService.instance.deleteEventRecord(id);
+    return mounted;
+  }
+
+  Future<bool> _deleteSurvey(SurveyRecord record) async {
+    if (!await _confirmDelete('NASA-TLX', record.name)) return false;
+    final id = record.databaseId;
+    if (id != null) await DatabaseService.instance.deleteSurveyRecord(id);
+    return mounted;
   }
 
   @override
@@ -91,12 +157,7 @@ class _ParticipantProfilePageState extends State<ParticipantProfilePage> {
             icon: const Icon(Icons.menu_rounded, color: _ink),
             onPressed: () => Scaffold.of(context).openDrawer(),
           )),
-          title: AnimatedPadding(
-            duration: const Duration(milliseconds: 320),
-            curve: Curves.easeOutCubic,
-            padding: EdgeInsets.only(left: _drawerOpen ? 180 : 0),
-            child: Text(participant.name, style: const TextStyle(color: _ink, fontWeight: FontWeight.w700)),
-          ),
+          title: Text(participant.name, style: const TextStyle(color: _ink, fontWeight: FontWeight.w700)),
           actions: [
             Padding(
               padding: const EdgeInsets.only(right: 12),
@@ -108,7 +169,6 @@ class _ParticipantProfilePageState extends State<ParticipantProfilePage> {
             ),
           ],
         ),
-        onDrawerChanged: (opened) => setState(() => _drawerOpen = opened),
         drawer: Drawer(backgroundColor: _pale, child: SafeArea(child: Column(children: [
           const SizedBox(height: 36),
           const CircleAvatar(radius: 44, backgroundColor: Colors.white, child: Icon(Icons.person, size: 54, color: _blue)),
@@ -319,7 +379,19 @@ class _ParticipantProfilePageState extends State<ParticipantProfilePage> {
       itemBuilder: (context, index) {
         final record = events[index];
         final trialNum = events.length - index;
-        return Card(
+        return Dismissible(
+          key: ValueKey('event-${record.databaseId ?? identityHashCode(record)}'),
+          direction: DismissDirection.endToStart,
+          background: Container(
+            margin: const EdgeInsets.only(bottom: 10),
+            padding: const EdgeInsets.only(right: 22),
+            alignment: Alignment.centerRight,
+            decoration: BoxDecoration(color: const Color(0xFFD94B4B), borderRadius: BorderRadius.circular(18)),
+            child: const Icon(Icons.delete_rounded, color: Colors.white),
+          ),
+          confirmDismiss: (_) => _deleteEvent(record),
+          onDismissed: (_) => setState(() => widget.participant.events.remove(record)),
+          child: Card(
           color: Colors.white,
           elevation: 0,
           margin: const EdgeInsets.only(bottom: 10),
@@ -349,7 +421,7 @@ class _ParticipantProfilePageState extends State<ParticipantProfilePage> {
               ),
             ),
             subtitle: Text(
-              '${record.success ? 'Successful' : 'Over time'} · ${record.wrongTurns} wrong turns · ${record.mapChecks} map checks',
+              '${record.success.name} · ${record.wrongTurns} wrong turns · ${record.mapChecks} map checks',
               style: const TextStyle(color: _muted),
             ),
             trailing: const Icon(
@@ -357,6 +429,7 @@ class _ParticipantProfilePageState extends State<ParticipantProfilePage> {
               color: _muted,
             ),
             onTap: () => showEventDetailDialog(context, record, matricNumber: widget.participant.matricNumber),
+          ),
           ),
         );
       },
@@ -412,7 +485,19 @@ class _ParticipantProfilePageState extends State<ParticipantProfilePage> {
       itemBuilder: (context, index) {
         final survey = surveys[index];
         final surveyNum = surveys.length - index;
-        return Card(
+        return Dismissible(
+          key: ValueKey('survey-${survey.databaseId ?? identityHashCode(survey)}'),
+          direction: DismissDirection.endToStart,
+          background: Container(
+            margin: const EdgeInsets.only(bottom: 10),
+            padding: const EdgeInsets.only(right: 22),
+            alignment: Alignment.centerRight,
+            decoration: BoxDecoration(color: const Color(0xFFD94B4B), borderRadius: BorderRadius.circular(18)),
+            child: const Icon(Icons.delete_rounded, color: Colors.white),
+          ),
+          confirmDismiss: (_) => _deleteSurvey(survey),
+          onDismissed: (_) => setState(() => widget.participant.surveys.remove(survey)),
+          child: Card(
           color: Colors.white,
           elevation: 0,
           margin: const EdgeInsets.only(bottom: 10),
@@ -450,6 +535,7 @@ class _ParticipantProfilePageState extends State<ParticipantProfilePage> {
               color: _muted,
             ),
             onTap: () => showSurveyDetailDialog(context, survey, matricNumber: widget.participant.matricNumber),
+          ),
           ),
         );
       },
